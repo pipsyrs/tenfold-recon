@@ -1,3 +1,15 @@
-
 # tenfold
 /.tenfold/
+
+# target lists & recon output (private, machine-specific)
+/targets/
+urls.txt
+subs.txt
+live.txt
+
+# local virtualenv (rebuild per machine, never push)
+/venv/
+
+# python cache
+__pycache__/
+*.pyc
