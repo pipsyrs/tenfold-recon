@@ -6,9 +6,12 @@ from pathlib import Path
 
 CONFIG_FILE = Path.home() / ".recon_automation.json"
 
+# output disimpan di targets/<target>/ dalam project (bukan ~/recon)
+PROJECT_DIR = Path(__file__).resolve().parent.parent
+
 DEFAULT_CONFIG = {
     "target": "",
-    "output_base": str(Path.home() / "recon"),
+    "output_base": str(PROJECT_DIR / "targets"),
     "wildcard": True,
     "headers": {},
     "rate_limit": 20,

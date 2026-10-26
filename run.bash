@@ -14,6 +14,80 @@ if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/n
     fi
 fi
 
+# ---- bootstrap: pastikan python3, pip, go terpasang (sekali jalan) ----
+# deteksi package manager + sudo
+if   command -v apt-get >/dev/null 2>&1; then PM="apt"
+elif command -v dnf     >/dev/null 2>&1; then PM="dnf"
+elif command -v pacman  >/dev/null 2>&1; then PM="pacman"
+elif command -v brew    >/dev/null 2>&1; then PM="brew"
+else PM=""; fi
+SUDO=""
+if [ "$(id -u)" -ne 0 ] && command -v sudo >/dev/null 2>&1; then SUDO="sudo"; fi
+
+pkg_install() {  # pkg_install <paket...>
+    case "$PM" in
+        apt)    $SUDO apt-get update -y && $SUDO apt-get install -y "$@" ;;
+        dnf)    $SUDO dnf install -y "$@" ;;
+        pacman) $SUDO pacman -Sy --noconfirm "$@" ;;
+        brew)   brew install "$@" ;;
+        *)      return 1 ;;
+    esac
+}
+
+set +e
+# Python3
+if ! command -v python3 >/dev/null 2>&1; then
+    echo "[*] Python3 belum ada, mencoba install..."
+    case "$PM" in
+        apt)    pkg_install python3 python3-pip python3-venv ;;
+        dnf)    pkg_install python3 python3-pip ;;
+        pacman) pkg_install python python-pip ;;
+        brew)   pkg_install python ;;
+        *)      echo "[!] Package manager tak dikenal. Install Python3 manual lalu ulangi."; exit 1 ;;
+    esac
+fi
+# pip
+if ! python3 -m pip --version >/dev/null 2>&1; then
+    echo "[*] pip belum ada, mencoba install..."
+    python3 -m ensurepip --upgrade >/dev/null 2>&1 || pkg_install python3-pip || pkg_install python-pip
+fi
+# Go (tool projectdiscovery butuh Go >= 1.21)
+GO_MIN="1.21"
+go_ok() {  # true bila go ada DAN versinya >= GO_MIN
+    command -v go >/dev/null 2>&1 || return 1
+    v=$(go version 2>/dev/null | grep -oE 'go[0-9]+\.[0-9]+' | head -1 | sed 's/go//')
+    [ -n "$v" ] && [ "$(printf '%s\n%s\n' "$GO_MIN" "$v" | sort -V | head -1)" = "$GO_MIN" ]
+}
+install_go_tarball() {  # Go resmi terbaru dari go.dev ke /usr/local/go
+    case "$(uname -m)" in
+        x86_64|amd64)  arch=amd64 ;;
+        aarch64|arm64) arch=arm64 ;;
+        *) echo "[!] Arch tak didukung utk auto-Go: $(uname -m). Install manual: https://go.dev/dl/"; return 1 ;;
+    esac
+    os=$(uname -s | tr '[:upper:]' '[:lower:]')
+    ver=$(curl -fsSL "https://go.dev/VERSION?m=text" 2>/dev/null | head -1); ver=${ver#go}
+    [ -n "$ver" ] || ver="1.23.4"
+    url="https://go.dev/dl/go${ver}.${os}-${arch}.tar.gz"
+    echo "[*] Download Go ${ver} ..."
+    tmp=$(mktemp -d)
+    if command -v curl >/dev/null 2>&1; then curl -fsSL "$url" -o "$tmp/go.tgz"
+    else wget -qO "$tmp/go.tgz" "$url"; fi || { echo "[!] Gagal download Go"; rm -rf "$tmp"; return 1; }
+    $SUDO rm -rf /usr/local/go && $SUDO tar -C /usr/local -xzf "$tmp/go.tgz"
+    rm -rf "$tmp"
+    export PATH="$PATH:/usr/local/go/bin"
+}
+if ! go_ok; then
+    echo "[*] Go belum ada / terlalu lama, mencoba install..."
+    case "$PM" in
+        apt)    pkg_install golang-go ;;
+        dnf)    pkg_install golang ;;
+        pacman) pkg_install go ;;
+        brew)   pkg_install go ;;
+    esac
+    go_ok || install_go_tarball
+fi
+set -e
+
 PY="venv/bin/python"
 [ -x "$PY" ] || PY="python3"
 

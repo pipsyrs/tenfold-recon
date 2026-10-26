@@ -23,7 +23,7 @@ CONFIG_FILE = Path.home() / ".recon_automation.json"
 # mirrors config.DEFAULT_CONFIG + new keys (doc 5)
 DEFAULT_CONFIG = {
     "target": "",
-    "output_base": str(Path.home() / "recon"),
+    "output_base": str(Path(__file__).resolve().parent.parent / "targets"),
     "wildcard": True,
     "headers": {},
     "rate_limit": 20,
