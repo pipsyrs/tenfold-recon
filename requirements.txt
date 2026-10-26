@@ -1,0 +1,6 @@
+# Dependency Python untuk recon.py
+# Install: pip install -r requirements.txt --break-system-packages
+rich==15.0.0
+readchar==4.2.2
+uro
+# gf = OPTIONAL external Go tool (go install github.com/tomnomnom/gf@latest), bukan pip
